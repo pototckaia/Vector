@@ -12,8 +12,6 @@ add_library(catch STATIC IMPORTED)
 set_property(TARGET catch PROPERTY IMPORTED_LOCATION "${CATCH_PATH}/libcatch.a")
 
 
-add_executable(main main.cpp vector.cpp vector.h)
-
 add_executable(test_vector test.cpp)
 target_include_directories(test_vector PRIVATE ${CATCH_PATH})
 target_link_libraries(test_vector vector catch)
