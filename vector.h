@@ -136,7 +136,7 @@ public:
 
 
     // const_iterator cast
-    explicit operator VectorIterator<T, true>() const {
+    operator VectorIterator<T, true>() const {
         return VectorIterator<T, true>(this->ptr_data_);
     };
 
