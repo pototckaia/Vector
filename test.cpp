@@ -19,7 +19,7 @@ struct person {
     explicit person(int my_age): name("age"), age(my_age) {};
     person(std::string& my_name) : name("& name "), age() {};
     person(std::string&& my_name) : name("&& name"), age() {};
-    person(const person& p): age(), name() {};
+    person(const person& p): name(), age() {};
 
     person& operator=(const person& p) {
         name = p.name;
@@ -299,7 +299,7 @@ TEST_CASE("access to an item") {
     }
     SECTION("data") {
         char* ptr = letters.data();
-        for (int i = 0; i < letters.size(); ++i) {
+        for (std::size_t i = 0; i < letters.size(); ++i) {
             REQUIRE(letters[i] == *(ptr + i));
         }
 
@@ -460,10 +460,10 @@ TEST_CASE("operation modifiers") {
             words = {"!", "Hello", ", ", "world", "!"};
             std::vector<std::string> insert_value{"Llll", "opop", "fdfdf", "dfadf", "gg"};
             auto iter_ans = answer.cbegin();
-            auto iter = words.begin();
-                                                                                                                                    for (int i = 0; i < insert_value.size(); i++) {
+            auto iter = words.cbegin();
 
-                iter = words.insert(iter, insert_value[i]); // how convert iterator in const_iterator
+            for (std::size_t i = 0; i < insert_value.size(); i++) {
+                iter = words.insert(iter, insert_value[i]);
                 iter += 2;
 
                 auto _iter = answer.insert(iter_ans, insert_value[i]);
