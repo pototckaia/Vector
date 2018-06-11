@@ -43,7 +43,12 @@ public:
     VectorIterator(const VectorIterator& other) : ptr_data_(other.ptr_data_) {}
     VectorIterator(VectorIterator&& other) noexcept : ptr_data_(std::move(other.ptr_data_)) {}
 
+    VectorIterator(const typename
+                   std::iterator_traits<VectorIterator<T, is_const_iterator>>:: pointer& ptr_data)
+        : ptr_data_(ptr_data) {}
+
     ~VectorIterator() = default;
+
 
     VectorIterator& operator=(const VectorIterator& other) {
         ptr_data_ = other.ptr_data_;
@@ -107,7 +112,7 @@ public:
         std::swap(this->ptr_data_, b.ptr_data_);
     }
 
-    typename std::iterator_traits<VectorIterator<T, is_const_iterator>>::difference_type // // must a+n==b, b == a + (b - a)
+    typename std::iterator_traits<VectorIterator<T, is_const_iterator>>::difference_type
     friend operator-(const VectorIterator& lv, const VectorIterator& rv)
     {
         return lv.ptr_data_ - rv.ptr_data_;
@@ -140,12 +145,9 @@ public:
         return VectorIterator<T, true>(this->ptr_data_);
     };
 
-    VectorIterator(const typename
-                   std::iterator_traits<VectorIterator<T, is_const_iterator>>::pointer& ptr_data)
-        : ptr_data_(ptr_data) {}
-
 private:
     typename std::iterator_traits<VectorIterator<T, is_const_iterator>>::pointer ptr_data_;
+
 };
 
 template <typename T, bool type>
@@ -159,7 +161,7 @@ bool operator!=(const VectorIterator<T, type>& this_, const VectorIterator<T, ty
 }
 
 template <typename T, bool type>
-bool operator<(const VectorIterator<T, type>& a, const VectorIterator<T, type>& b) {  // !(a < a), if a < b then !(b < a), if a < b and b < c then a < c, a < b or b < a or a == b
+bool operator<(const VectorIterator<T, type>& a, const VectorIterator<T, type>& b) {
     return a.data() < b.data();
 }
 
@@ -353,22 +355,22 @@ private:
     bool requires_reallocation(size_type new_size) { return new_size >= capacity_; }
     void reallocation(size_type);
 
-    void shift_right(size_type n, iterator from, iterator to);
+    void shift_right(size_type n, iterator from, iterator after_last);
     void shift_left(size_type n, iterator from, iterator to);
 
     template <typename TypeIteratorBase>
-    void validate(TypeIteratorBase base, size_type n, const value_type& value);
+    void create_obj(TypeIteratorBase base, size_type n, const value_type& value);
 
     template <typename TypeIteratorBase>
-    void validate(TypeIteratorBase base, size_type n);
+    void create_obj(TypeIteratorBase base, size_type n);
 
     template <typename TypeIteratorBase, typename TypeIteratorCon,
         class = typename std::enable_if<!std::is_integral<TypeIteratorCon>::value>::type>
-    void validate(TypeIteratorBase base, const TypeIteratorCon& begin, const TypeIteratorCon& end);
+    void create_obj(TypeIteratorBase base, const TypeIteratorCon& begin, const TypeIteratorCon& end);
 
     template <typename TypeIterator>
-    void invalidate(TypeIterator begin, TypeIterator end);
-    void invalidate_all();
+    void destroy_obj(TypeIterator begin, TypeIterator end);
+    void destoy_all_obj();
 };
 
 template <typename T, typename Allocator>
@@ -380,22 +382,30 @@ void Vector<T, Allocator>::shift_left(size_type n, iterator from, iterator to) {
 }
 
 template <typename T, typename A>
-void Vector<T, A>::shift_right(size_type n, iterator from, iterator to) { // [begin, last)
-    if (from >= to || n == 0) {
+void Vector<T, A>::shift_right(size_type n, iterator from, iterator after_last) { // [begin, last)
+    if (from >= after_last || n == 0) {
         return;
     }
-    iterator d_last = to, it_last = to + n, it_first = this->end();
-    if (from + n > it_first) {
-        it_first = from + n;
+    iterator target_last = after_last + n; // end target
+
+    iterator distionation_last = after_last;
+
+    iterator border_create = this->end();
+    if (from + n > this->end()) {
+        border_create = from + n;
     }
-    if (it_last > this->end()){
-        while (it_last != it_first) {
-            new ((--it_last).data()) T(std::move(*(--d_last)));
+
+    if (target_last > this->end()){
+        while (target_last != border_create) {
+            --target_last;
+            --distionation_last;
+            std::allocator_traits<allocator_type>::construct(
+                               allocator_, (target_last).data(), std::move(*distionation_last));
         }
     }
 
-    if (it_last <= this->end()) {
-        std::move_backward(from, d_last, it_last); // [first, last)
+    if (target_last <= this->end()) {
+        std::move_backward(from, distionation_last, target_last); // [first, last)
     }
 }
 
@@ -443,46 +453,46 @@ void swap(Vector<T, A>& first, Vector<T, A>& second) noexcept {
 
 template <typename T, typename Allocator>
 template <typename TypeIteratorBase,  typename TypeIteratorCon, typename type>
-inline void kkk::Vector<T, Allocator>::validate(TypeIteratorBase base,
-                                                const TypeIteratorCon& begin,
-                                                const TypeIteratorCon& end)
+inline void kkk::Vector<T, Allocator>::create_obj(TypeIteratorBase base,
+                                                  const TypeIteratorCon& begin,
+                                                  const TypeIteratorCon& end)
 {
     for (auto iter_init = begin; iter_init != end; ++iter_init, ++base) {
-        new (base.data()) T(*iter_init);
+        std::allocator_traits<allocator_type>::construct(allocator_, base.data(), *iter_init);
     }
 }
 
 template <typename T, typename Allocator>
 template <typename TypeIterator>
-void kkk::Vector<T, Allocator>::validate(TypeIterator base,
-                                         size_type n,
-                                         const value_type& value)
+void kkk::Vector<T, Allocator>::create_obj(TypeIterator base,
+                                           size_type n,
+                                           const value_type& value)
 {
     for (size_type i = 0; i < n; ++i, ++base) {
-        new (base.data()) T(value);
+        std::allocator_traits<allocator_type>::construct(allocator_, base.data(), value);
     }
 }
 
 template <typename T, typename Allocator>
 template <typename TypeIterator>
-void kkk::Vector<T, Allocator>::validate(TypeIterator base, size_type n) {
+void kkk::Vector<T, Allocator>::create_obj(TypeIterator base, size_type n) {
     for (size_type i = 0; i < n; ++i) {
-        new (base.data()) T();
+        std::allocator_traits<allocator_type>::construct(allocator_, base.data());
         ++base;
     }
 }
 
 template <typename T, typename Allocator>
 template <typename TypeIterator>
-inline void kkk::Vector<T, Allocator>::invalidate(TypeIterator begin, TypeIterator end) {
+inline void kkk::Vector<T, Allocator>::destroy_obj(TypeIterator begin, TypeIterator end) {
     for (auto iter_init = begin; iter_init != end; ++iter_init) {
-        (*iter_init).~value_type();
+        iter_init->~value_type();
     }
 }
 
 template <typename T, typename Allocator>
-inline void kkk::Vector<T, Allocator>::invalidate_all() {
-    this->invalidate(this->begin(), this->end());
+inline void kkk::Vector<T, Allocator>::destoy_all_obj() {
+    this->destroy_obj(this->begin(), this->end());
 }
 
 template <typename T, typename Allocator>
@@ -521,7 +531,7 @@ kkk::Vector<T, A>::Vector(size_t n, const allocator_type& alloc)
       ptr_pool_(std::allocator_traits<A>::allocate(allocator_, capacity_)),
       ptr_data_(ptr_pool_)
 {
-    this->validate(iterator(ptr_data_), n);
+    this->create_obj(iterator(ptr_data_), n);
 }
 
 template <typename T, typename A>
@@ -533,7 +543,7 @@ kkk::Vector<T, A>::Vector(size_t n, const T& value,
       ptr_pool_(std::allocator_traits<A>::allocate(allocator_, capacity_)),
       ptr_data_(ptr_pool_)
 {
-    this->validate(iterator(ptr_data_), size_, value);
+    this->create_obj(iterator(ptr_data_), size_, value);
 }
 
 template <typename T, typename A>
@@ -546,7 +556,7 @@ kkk::Vector<T, A>::Vector(InputIterator first, InputIterator last,
       ptr_pool_(std::allocator_traits<A>::allocate(allocator_, capacity_)),
       ptr_data_(ptr_pool_)
 {
-    this->validate(iterator(ptr_data_), first, last);
+    this->create_obj(iterator(ptr_data_), first, last);
 }
 
 template <typename T, typename A>
@@ -560,7 +570,7 @@ kkk::Vector<T, A>::Vector(const Vector<T, A>& other)
       ptr_pool_(std::allocator_traits<A>::allocate(allocator_, capacity_)),
       ptr_data_(ptr_pool_)
 {
-    this->validate(this->begin(), other.begin(), other.end());
+    this->create_obj(this->begin(), other.begin(), other.end());
 }
 
 template <typename T, typename A>
@@ -572,7 +582,7 @@ kkk::Vector<T, A>::Vector(const Vector<T, A>& other,
       ptr_pool_(std::allocator_traits<A>::allocate(allocator_, capacity_)),
       ptr_data_(ptr_pool_)
 {
-    this->validate(this->begin(), other.begin(), other.end());
+    this->create_obj(this->begin(), other.begin(), other.end());
 }
 
 template <typename T, typename A>
@@ -603,7 +613,7 @@ kkk::Vector<T, A>::Vector(Vector<T, A>&& other, const A& alloc) noexcept
 
 template <typename T, typename A>
 kkk::Vector<T, A>::~Vector() {
-    this->invalidate_all();
+    this->destoy_all_obj();
     std::allocator_traits<A>::deallocate(allocator_, ptr_pool_, capacity_);
 }
 
@@ -630,18 +640,18 @@ kkk::Vector<T, A>& kkk::Vector<T, A>::operator=(std::initializer_list<T> init) n
 
 template <typename T, typename A>
 void kkk::Vector<T, A>::assign(size_type n, const T& value) {
-    this->invalidate_all();
+    this->destoy_all_obj();
     this->reallocation(n);
-    this->validate(this->begin(), n, value);
+    this->create_obj(this->begin(), n, value);
     size_ = n;
 }
 
 template <typename T, typename A>
 template <typename InputIterator, typename enable_if>
 void kkk::Vector<T, A>::assign(InputIterator first, InputIterator last) {
-    this->invalidate_all();
+    this->destoy_all_obj();
     this->reallocation(std::distance(first, last));
-    this->validate(this->begin(), first, last);
+    this->create_obj(this->begin(), first, last);
     size_ = std::distance(first, last);
 }
 
@@ -720,9 +730,9 @@ void kkk::Vector<T, A>::reserve(size_type new_capacity) {
 
     pointer new_ptr_pool = std::allocator_traits<A>::allocate(allocator_, new_capacity);
     pointer new_ptr_data = new_ptr_pool;
-    this->validate(iterator(new_ptr_data), this->begin(), this->end());
+    this->create_obj(iterator(new_ptr_data), this->begin(), this->end());
 
-    this->invalidate_all();
+    this->destoy_all_obj();
     std::allocator_traits<A>::deallocate(allocator_, ptr_pool_, capacity_);
 
     ptr_pool_ = new_ptr_pool;
@@ -764,7 +774,7 @@ void kkk::Vector<T, A>::shrink_to_fit() {
 
 template <typename T, typename A>
 void kkk::Vector<T, A>::clear() noexcept {
-    this->invalidate_all();
+    this->destoy_all_obj();
     size_ = 0;
 }
 
@@ -784,7 +794,7 @@ void kkk::Vector<T, A>::pop_back() {
     if (this->empty()) {
         return;
     }
-    this->back().~value_type();
+    std::allocator_traits<allocator_type>::destroy(allocator_, ptr_data_ + size_ - 1);
     --size_;
 }
 
@@ -792,7 +802,7 @@ template <typename T, typename A>
 template <typename ...Args>
 void kkk::Vector<T, A>::emplace_back(Args&& ... args) {
     this->reallocation(size_ + 1);
-    new (ptr_data_ + size_) T(std::forward<Args>(args)...);
+    std::allocator_traits<A>::construct(allocator_, ptr_data_ + size_, std::forward<Args>(args)...);
     ++size_;
 }
 
@@ -807,7 +817,7 @@ typename kkk::Vector<T, A>::iterator kkk::Vector<T, A>::emplace(const_iterator p
         this->shift_right(1, iterator(ptr_data_ + index_position), this->end());
     }
 
-    new (ptr_data_ + index_position) T(std::forward<Args>(args)...);
+    std::allocator_traits<A>::construct(allocator_, ptr_data_ + index_position, std::forward<Args>(args)...);
     ++size_;
 
     return iterator(ptr_data_ + index_position);
@@ -825,7 +835,7 @@ typename kkk::Vector<T, A>::iterator kkk::Vector<T, A>::insert(const_iterator po
 
     iterator valid_position = iterator(ptr_data_ + index_position);
     this->shift_right(n, valid_position, this->end());
-    this->validate(valid_position, n, x);
+    this->create_obj(valid_position, n, x);
     size_ += n;
 
     return valid_position;
@@ -842,7 +852,7 @@ typename kkk::Vector<T, A>::iterator kkk::Vector<T, A>::insert(const_iterator po
     this->reallocation(size_ + n);
     iterator valid_position = iterator(ptr_data_ + index_position);
     this->shift_right(n, valid_position, this->end());
-    this->validate(valid_position, first, last);
+    this->create_obj(valid_position, first, last);
     size_ += n;
 
     return valid_position;
@@ -882,10 +892,10 @@ void kkk::Vector<T, A>::swap(Vector& other) noexcept {
 template <typename T, typename A>
 void kkk::Vector<T, A>::resize(kkk::Vector<T, A>::size_type n, const value_type& value) {
     if (size_ >= n) {
-        this->invalidate(this->begin() + n, this->end());
+        this->destroy_obj(this->begin() + n, this->end());
     } else {
         this->reallocation(n);
-        this->validate(this->end(), n - size_, value);
+        this->create_obj(this->end(), n - size_, value);
     }
     size_ = n;
 }
@@ -893,10 +903,10 @@ void kkk::Vector<T, A>::resize(kkk::Vector<T, A>::size_type n, const value_type&
 template <typename T, typename A>
 void kkk::Vector<T, A>::resize(kkk::Vector<T, A>::size_type n) {
     if (size_ >= n) {
-        this->invalidate(this->begin() + n, this->end());
+        this->destroy_obj(this->begin() + n, this->end());
     } else {
         this->reallocation(n);
-        this->validate(this->end(), n - size_);
+        this->create_obj(this->end(), n - size_);
     }
     size_ = n;
 }
