@@ -4,8 +4,10 @@
 #include <vector>
 #include <iostream>
 
+
 #include "catch.hpp"
 #include "vector.h"
+#include "allocator.h"
 
 struct person {
     std::string name;
@@ -206,60 +208,6 @@ TEST_CASE("assign") {
         words.assign({"lol", ",", "kek", ",", "cheburek"});
         alert_vector(words, result_str);
     }
-}
-
-TEST_CASE("iterator") {
-
-    kkk::Vector<int> numbers{12, 12, 23, -78, 34, 23, 1};
-    const kkk::Vector<int> const_numbers = numbers;
-
-
-    REQUIRE(*numbers.begin() == numbers[0]);
-    REQUIRE(*(--numbers.end()) == numbers[6]);
-
-    REQUIRE(*const_numbers.begin() == const_numbers[0]);
-    REQUIRE(*(--const_numbers.end()) == const_numbers[6]);
-
-    REQUIRE(*numbers.cbegin() == const_numbers[0]);
-    REQUIRE(*(--numbers.cend()) == const_numbers[6]);
-
-    REQUIRE(*(numbers.rbegin()) == numbers[6]);
-    REQUIRE(*(--numbers.rend()) == numbers[0]);
-
-    long size_ = std::distance(numbers.begin(), numbers.end());
-    REQUIRE(size_ == numbers.size());
-
-    size_ = const_numbers.rend() - const_numbers.rbegin();
-    REQUIRE(size_ == const_numbers.size());
-
-    numbers = {1};
-    REQUIRE(numbers.begin() != numbers.end());
-    REQUIRE(numbers.rbegin() != numbers.rend());
-
-    numbers = {};
-    REQUIRE(numbers.begin() == numbers.end());
-    REQUIRE((numbers.rbegin() == numbers.rend()));
-
-    int index = 0;
-    numbers = {012, 12, 23, -78, 34, 23, 1};
-    for (auto iter = numbers.begin(); iter != numbers.end(); ++iter) {
-        REQUIRE(*iter == numbers[index]);
-        index++;
-    }
-
-    index = 6;
-    numbers = {012, 12, 23, -78, 34, 23, 1};
-    for (auto iter = numbers.rbegin(); iter != numbers.rend(); ++iter) {
-        REQUIRE(*iter == numbers[index]);
-        index--;
-    }
-
-    kkk::Vector<int>::const_iterator c = numbers.begin();
-    REQUIRE(*c == numbers[0]);
-
-    c = --numbers.end();
-    REQUIRE(*c == numbers.back());
-
 }
 
 TEST_CASE("access to an item") {
@@ -566,4 +514,105 @@ TEST_CASE("operation modifiers") {
 
     }
 
+}
+
+
+TEST_CASE("iterator") {
+
+    kkk::Vector<int> numbers{12, 12, 23, -78, 34, 23, 1};
+    const kkk::Vector<int> const_numbers = numbers;
+
+    SECTION("begin and end") {
+        REQUIRE(*numbers.begin() == numbers[0]);
+        REQUIRE(*(--numbers.end()) == numbers[6]);
+
+        REQUIRE(*const_numbers.begin() == const_numbers[0]);
+        REQUIRE(*(--const_numbers.end()) == const_numbers[6]);
+
+        REQUIRE(*numbers.cbegin() == const_numbers[0]);
+        REQUIRE(*(--numbers.cend()) == const_numbers[6]);
+
+        REQUIRE(*(numbers.rbegin()) == numbers[6]);
+        REQUIRE(*(--numbers.rend()) == numbers[0]);
+
+        long size_ = std::distance(numbers.begin(), numbers.end());
+        REQUIRE(size_ == numbers.size());
+
+        size_ = const_numbers.rend() - const_numbers.rbegin();
+        REQUIRE(size_ == const_numbers.size());
+
+        numbers = {1};
+        REQUIRE(numbers.begin() != numbers.end());
+        REQUIRE(numbers.rbegin() != numbers.rend());
+
+        numbers = {};
+        REQUIRE(numbers.begin() == numbers.end());
+        REQUIRE((numbers.rbegin() == numbers.rend()));
+    }
+
+    SECTION("operator ++ -- [] *") {
+
+        int index = 0;
+        numbers = {012, 12, 23, -78, 34, 23, 1};
+        for (auto iter = numbers.begin(); iter != numbers.end(); ++iter) {
+            REQUIRE(*iter == numbers[index]);
+            index++;
+        }
+
+        index = 6;
+        numbers = {012, 12, 23, -78, 34, 23, 1};
+        for (auto iter = numbers.rbegin(); iter != numbers.rend(); ++iter) {
+            REQUIRE(*iter == numbers[index]);
+            index--;
+        }
+
+        REQUIRE(numbers.begin() + 3 == 3 + numbers.begin());
+        REQUIRE(numbers.end() - 3 == 3 - numbers.end());
+
+        auto size =  numbers.end() - numbers.begin() - 2;
+        REQUIRE(numbers.begin() + 2 + size == numbers.end());
+
+        REQUIRE(numbers.begin()[4] == *(numbers.begin() + 4));
+
+    }
+
+    SECTION("comparison") {
+//        Strict total ordering relation
+        REQUIRE(numbers.begin() < numbers.begin() + 4);
+        REQUIRE(!(numbers.begin() < numbers.begin()));
+
+
+        auto iter_1 = numbers.end() - 3;
+        auto iter_2 = numbers.begin() + 3;
+        bool p = (iter_1 < iter_2) || (iter_1 > iter_2) || (iter_1 == iter_2);
+        REQUIRE(p);
+
+        if (iter_1 < iter_2) { REQUIRE(!(iter_2 < iter_1)); }
+        if (iter_1 > iter_2) { REQUIRE(!(iter_2 > iter_1)); }
+
+    }
+
+    SECTION("convert") {
+        kkk::Vector<int>::const_iterator c = numbers.begin();
+        REQUIRE(*c == numbers[0]);
+
+        c = --numbers.end();
+        REQUIRE(*c == numbers.back());
+    }
+
+
+}
+
+TEST_CASE("allocator") {
+
+//    std::list<int, kkk::Allocator<int>> test;
+//    int limit = 1000;
+//    for(int i = 0; i < limit; ++i) {
+//        test.push_back(i);
+//    }
+//
+//    test.erase(test.begin());
+//    test.erase(test.end());
+//
+//    test.clear();
 }
