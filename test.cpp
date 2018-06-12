@@ -603,16 +603,69 @@ TEST_CASE("iterator") {
 
 }
 
-TEST_CASE("allocator") {
+TEST_CASE("allocator list<int>") {
 
-//    std::list<int, kkk::Allocator<int>> test;
-//    int limit = 1000;
-//    for(int i = 0; i < limit; ++i) {
-//        test.push_back(i);
-//    }
-//
-//    test.erase(test.begin());
-//    test.erase(test.end());
-//
-//    test.clear();
+    std::list<int, kkk::Allocator<int>> test;
+    int limit = 1000;
+    test.push_back(1000);
+    test.erase(test.begin());
+
+    for(int i = 0; i < limit; ++i) {
+        test.push_back(i);
+    }
+    test.erase(test.begin());
+    test.erase(std::prev(test.end()));
+
+    auto iter_begin = test.begin(), iter_end = test.begin();
+    std::advance(iter_begin, 2);
+    std::advance(iter_end, 15);
+    test.erase(iter_begin, iter_end);
+
+    for (auto iter = test.begin(); iter != test.end(); ) {
+        if (*iter % 2 == 0) {
+            iter = test.erase(iter);
+        } else {
+            ++iter;
+        }
+    }
+
+    for (int i = 0; i < 10; ++i) test.pop_back();
+    for (int i = 0; i < 10; ++i) test.pop_front();
+
+    test.insert(test.begin(), {1, 40, 89, 30, 90});
+    test.insert(test.begin(), 3, 10);
+
+    test.clear();
+}
+
+TEST_CASE("allocator list<string>") {
+    std::list<std::string, kkk::Allocator<std::string>> test;
+    int limit = 100000;
+    std::string s(100, ' ');
+    for(int i = 0; i < limit; ++i) {
+        test.push_back(s);
+    }
+
+    test.erase(test.begin());
+    test.erase(std::prev(test.end()));
+
+    auto iter = test.begin();
+    std::advance(iter, 1000);
+    test.erase(iter);
+
+    for(int i = 0; i < limit; ++i) {
+        test.push_back(s);
+    }
+
+    iter = test.begin();
+    for (int i = 0; i < 8; ++i) {
+        std::advance(iter, 1000);
+        iter = test.erase(iter);
+    }
+
+    for(int i = 0; i < limit; ++i) {
+        test.push_back(s);
+    }
+
+    test.clear();
 }
