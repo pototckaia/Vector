@@ -16,9 +16,8 @@ add_executable(test_lib test.cpp allocator.cpp allocator.h)
 target_link_libraries(test_lib vector catch)
 
 
-add_executable(test_allocator allocator_benchmark.cpp allocator.cpp allocator.h )
-target_link_libraries(test_allocator vector catch)
-target_link_libraries(test_allocator benchmark -lpthread)
+add_executable(allocator_benchmark allocator_benchmark.cpp allocator.cpp allocator.h )
+target_link_libraries(allocator_benchmark benchmark -lpthread)
 
 
 
