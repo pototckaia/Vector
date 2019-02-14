@@ -46,6 +46,7 @@ private:
     block_pointer head_allocated_blocks;
 
     void add_pool();
+    
     void pop_front(block_pointer& head) {
         head = head->next;
         if (head != nullptr) {
