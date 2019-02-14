@@ -1,0 +1,16 @@
+2018-06-12 22:28:41
+Running /home/oem/Documents/Homeworks/Cpp-homework/vector_library/cmake-build-debug/allocator_benchmark
+Run on (4 X 3000 MHz CPU s)
+CPU Caches:
+  L1 Data 32K (x2)
+  L1 Instruction 32K (x2)
+  L2 Unified 256K (x2)
+  L3 Unified 3072K (x1)
+***WARNING*** CPU scaling is enabled, the benchmark real time measurements may be noisy and will incur extra overhead.
+----------------------------------------------------------------------------------------------
+Benchmark                                                       Time           CPU Iterations
+----------------------------------------------------------------------------------------------
+BM_fixed_allocator_int<std::allocator<int>>             845662865 ns  845407423 ns          1
+BM_fixed_allocator_int<kkk::Allocator<int>>             840484407 ns  840295226 ns          1
+BM_fixed_allocator_string<std::allocator<std::string>>  192392915 ns  191944473 ns          3
+BM_fixed_allocator_string<kkk::Allocator<std::string>>  138982135 ns  138892794 ns          4
